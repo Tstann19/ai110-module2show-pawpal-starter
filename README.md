@@ -60,3 +60,5 @@ My TaskManager and Application can handle:
 To run the tests: python -m pytest
 
 The tests in test_pawpal.py tests the fundamental functions and features of the application. Such as task completion, adding tasks, filtering tasks, recurring tasks, and dupilcates of tasks.
+
+<img width="1512" height="982" alt="Screenshot 2026-02-16 at 4 17 19 AM" src="https://github.com/user-attachments/assets/ae95609a-0afc-4698-aec5-985bee7d3158" />
