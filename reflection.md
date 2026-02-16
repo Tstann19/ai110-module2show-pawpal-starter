@@ -66,12 +66,18 @@ One moment I didn't accept the AI suggestion is when the Claude AI wanted to cre
 - What behaviors did you test?
 - Why were these tests important?
 
+---
+I tested primarily the features around the tasks and task manager as these were roughly much more of a complex implementation than adding pets or removing them. 
+
+These tests were important as they were the integral part of the application. If I as an user am unable to make tasks or there was problems with that function it'd probably deter me from using the app. So, these tasks were almost required to keep the app working.
+
 **b. Confidence**
 
 - How confident are you that your scheduler works correctly?
 - What edge cases would you test next if you had more time?
 
 ---
+I'd say roughly 4 stars that I'm confident that my scheduler works as intended. As I feel there can be more edge cases regarding time constraints. If I had more time I'd have expand more on the owner's priorities and time constraints as I was proceeding with the code became less of a priority at the time.
 
 ## 5. Reflection
 

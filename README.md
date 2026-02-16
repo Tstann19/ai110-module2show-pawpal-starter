@@ -54,3 +54,9 @@ My TaskManager and Application can handle:
 - Conflict warnings - Avoid double-booking
 - Duplicate prevention - No accidental repeats
 - Flexible filtering - Find tasks by any criteria
+
+### Testing PawPal+
+
+To run the tests: python -m pytest
+
+The tests in test_pawpal.py tests the fundamental functions and features of the application. Such as task completion, adding tasks, filtering tasks, recurring tasks, and dupilcates of tasks.
