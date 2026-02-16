@@ -47,6 +47,106 @@ class Pet:
         """Set the pet's animal type"""
         self._animal_type = animal_type
 
+    def __repr__(self) -> str:
+        """String representation of the Pet"""
+        return f"Pet(name='{self._name}', age={self._age}, type='{self._animal_type}')"
+
+
+class Owner:
+    """Represents a pet owner who can have multiple pets"""
+
+    def __init__(self, name: str, email: str, phone: Optional[str] = None):
+        """
+        Initialize an Owner instance
+
+        Args:
+            name: Owner's name
+            email: Owner's email address
+            phone: Owner's phone number (optional)
+        """
+        self._owner_id = str(uuid.uuid4())
+        self._name = name
+        self._email = email
+        self._phone = phone
+        self._pets: List[Pet] = []
+
+    def get_owner_id(self) -> str:
+        """Get the owner's unique ID"""
+        return self._owner_id
+
+    def get_name(self) -> str:
+        """Get the owner's name"""
+        return self._name
+
+    def get_email(self) -> str:
+        """Get the owner's email"""
+        return self._email
+
+    def get_phone(self) -> Optional[str]:
+        """Get the owner's phone number"""
+        return self._phone
+
+    def get_pets(self) -> List[Pet]:
+        """Get all pets owned by this owner"""
+        return self._pets
+
+    def set_name(self, name: str) -> None:
+        """Set the owner's name"""
+        self._name = name
+
+    def set_email(self, email: str) -> None:
+        """Set the owner's email"""
+        self._email = email
+
+    def set_phone(self, phone: str) -> None:
+        """Set the owner's phone number"""
+        self._phone = phone
+
+    def add_pet(self, pet: Pet) -> None:
+        """
+        Add a pet to the owner's pet list
+
+        Args:
+            pet: Pet object to add
+        """
+        if pet not in self._pets:
+            self._pets.append(pet)
+
+    def remove_pet(self, pet_name: str) -> bool:
+        """
+        Remove a pet by name
+
+        Args:
+            pet_name: Name of the pet to remove
+
+        Returns:
+            True if pet was removed, False if not found
+        """
+        for pet in self._pets:
+            if pet.get_name() == pet_name:
+                self._pets.remove(pet)
+                return True
+        return False
+
+    def get_pet_by_name(self, pet_name: str) -> Optional[Pet]:
+        """
+        Find a pet by name
+
+        Args:
+            pet_name: Name of the pet to find
+
+        Returns:
+            Pet object if found, None otherwise
+        """
+        for pet in self._pets:
+            if pet.get_name() == pet_name:
+                return pet
+        return None
+
+    def __repr__(self) -> str:
+        """String representation of the Owner"""
+        return f"Owner(name='{self._name}', email='{self._email}', pets={len(self._pets)})"
+
 
 class Task:
     """Represents a pet care task"""
