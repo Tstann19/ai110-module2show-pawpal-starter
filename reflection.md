@@ -32,13 +32,16 @@ Also the class I stated earlier to utilize AI (Generate plan) I haven't actually
 - What constraints does your scheduler consider (for example: time, priority, preferences)?
 - How did you decide which constraints mattered most?
 
+My specific task manager considers time and priority, not necessarily preferences. I considered time to matter the most as if this must be done at a certain time that's obviously important. I assumed priority would only be taken into consideration when two or more tasks overlap. However, in my code my tasks don't overlap and will not be allowed. Even though, all tasks still have a priority considered.
+
 **b. Tradeoffs**
 
 - Describe one tradeoff your scheduler makes.
 - Why is that tradeoff reasonable for this scenario?
 
 ---
-One tradeoff in my application I've noticed is the storage need
+One tradeoff in my application I've noticed is my application is simple and can produce reasonable plans. However, due to my code looking for the general ways a schedule can be made it misses a few
+edge cases and can miss better scheduling combinations. This is reasonable as the code primarily works for majority of the part and is readable to the coder. Yet, it isn't a perfect interation of what the application could be.
 
 ## 3. AI Collaboration
 
@@ -85,10 +88,16 @@ I'd say roughly 4 stars that I'm confident that my scheduler works as intended. 
 
 - What part of this project are you most satisfied with?
 
+I'm most satisfied that I was able to create an application in so little time using AI. I'm also proud that I utilized files for their designated purpose. Before in coding my code felt unstructured due to the fact I didn't have practice organizing it.
+
 **b. What you would improve**
 
 - If you had another iteration, what would you improve or redesign?
 
+I'd probably improve the UI. To my dismay I wasn't able to give the UI more of a pop for the user so I'd probably learn how to update the UI into a better look. Such as using more color rather than black or having a more simplistic format for the user. Maybe adding tabs within the UI could also make information more easier to look at glance rather than scrolling.
+
 **c. Key takeaway**
 
 - What is one important thing you learned about designing systems or working with AI on this project?
+
+That when utilizing AI within a project, it's important to reduce the complexity. As AI tends to complicate certain structures of code along with how files are organized as well. Also during this project I learned the types of files that come to be a structure of the system/application. Such as a diagram, test file, backend file, and specific UI file.
