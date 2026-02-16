@@ -5,6 +5,7 @@ Pet care task scheduling system
 
 import uuid
 from typing import List, Dict, Optional, Any
+from datetime import datetime, time, timedelta
 
 
 class Pet:
@@ -214,7 +215,9 @@ class Task:
         time: str,
         priority: int,
         duration: int,
-        task_type: str
+        task_type: str,
+        recurrence: Optional[str] = None,
+        pet_id: Optional[str] = None
     ):
         """
         Initialize a Task instance
@@ -222,10 +225,12 @@ class Task:
         Args:
             task_name: Name of the task
             description: Detailed description of the task
-            time: Scheduled time for the task
+            time: Scheduled time for the task (HH:MM format)
             priority: Priority level (higher number = higher priority)
             duration: Duration in minutes
             task_type: Type of task (walk, feed, medication, grooming, playtime, etc.)
+            recurrence: Recurrence pattern (None, "daily", "weekly", etc.)
+            pet_id: Optional pet ID to associate task with a specific pet
 
         Raises:
             ValueError: If parameters are invalid
@@ -241,6 +246,9 @@ class Task:
         if not task_type or not task_type.strip():
             raise ValueError("Task type cannot be empty")
 
+        # Parse and validate time
+        self._time_obj = self._parse_time(time)
+
         self._task_id = str(uuid.uuid4())
         self._task_name = task_name.strip()
         self._description = description.strip()
@@ -248,6 +256,31 @@ class Task:
         self._priority = priority
         self._duration = duration
         self._task_type = task_type.strip().lower()
+        self._recurrence = recurrence
+        self._pet_id = pet_id
+        self._completed = False
+        self._completed_time: Optional[datetime] = None
+
+    @staticmethod
+    def _parse_time(time_str: str) -> time:
+        """
+        Parse time string in HH:MM format
+
+        Args:
+            time_str: Time string to parse
+
+        Returns:
+            time object
+
+        Raises:
+            ValueError: If time format is invalid
+        """
+        try:
+            time_str = time_str.strip()
+            parsed = datetime.strptime(time_str, "%H:%M")
+            return parsed.time()
+        except ValueError:
+            raise ValueError(f"Invalid time format '{time_str}'. Expected HH:MM (e.g., '07:30')")
 
     def get_task_id(self) -> str:
         """Get the task's unique ID"""
@@ -277,8 +310,43 @@ class Task:
         """Get the task type"""
         return self._task_type
 
+    def get_time_obj(self) -> time:
+        """Get the scheduled time as a time object"""
+        return self._time_obj
+
+    def get_recurrence(self) -> Optional[str]:
+        """Get the task recurrence pattern"""
+        return self._recurrence
+
+    def get_pet_id(self) -> Optional[str]:
+        """Get the pet ID associated with this task"""
+        return self._pet_id
+
+    def set_pet_id(self, pet_id: Optional[str]) -> None:
+        """Set the pet ID for this task"""
+        self._pet_id = pet_id
+
+    def is_completed(self) -> bool:
+        """Check if task is completed"""
+        return self._completed
+
+    def get_completed_time(self) -> Optional[datetime]:
+        """Get the time when task was completed"""
+        return self._completed_time
+
+    def mark_completed(self) -> None:
+        """Mark task as completed with current timestamp"""
+        self._completed = True
+        self._completed_time = datetime.now()
+
+    def mark_incomplete(self) -> None:
+        """Mark task as not completed"""
+        self._completed = False
+        self._completed_time = None
+
     def set_time(self, time: str) -> None:
         """Set the scheduled time"""
+        self._time_obj = self._parse_time(time)
         self._time = time.strip()
 
     def set_priority(self, priority: int) -> None:
@@ -301,18 +369,53 @@ class Task:
             raise ValueError("Task duration must be positive")
         self._duration = duration
 
+    def get_end_time_obj(self) -> time:
+        """
+        Calculate and return the end time of the task
+
+        Returns:
+            time object representing when task ends
+        """
+        start = datetime.combine(datetime.today(), self._time_obj)
+        end = start + timedelta(minutes=self._duration)
+        return end.time()
+
     def __repr__(self) -> str:
         """String representation of the Task"""
+        status = "✓" if self._completed else " "
+        recur = f", recur={self._recurrence}" if self._recurrence else ""
         return (f"Task(name='{self._task_name}', type='{self._task_type}', "
-                f"time='{self._time}', priority={self._priority}, duration={self._duration}min)")
+                f"time='{self._time}', priority={self._priority}, "
+                f"duration={self._duration}min{recur}, completed=[{status}])")
 
 
 class TaskManager:
     """Manages pet care tasks - creating, editing, and deleting"""
 
     def __init__(self):
-        """Initialize TaskManager with an empty task list"""
-        self._tasks: List[Task] = []
+        """Initialize TaskManager with an empty task dictionary"""
+        self._tasks: Dict[str, Task] = {}  # task_id -> Task
+        self._total_duration_cache: Optional[int] = None
+
+    def _invalidate_cache(self) -> None:
+        """Invalidate the total duration cache"""
+        self._total_duration_cache = None
+
+    def has_duplicate_task(self, task_name: str, time: str) -> bool:
+        """
+        Check if a task with the same name and time already exists
+
+        Args:
+            task_name: Name of the task to check
+            time: Scheduled time to check
+
+        Returns:
+            True if duplicate exists, False otherwise
+        """
+        for task in self._tasks.values():
+            if task.get_task_name() == task_name and task.get_time() == time:
+                return True
+        return False
 
     def create_task(
         self,
@@ -321,7 +424,11 @@ class TaskManager:
         time: str,
         priority: int,
         duration: int,
-        task_type: str
+        task_type: str,
+        recurrence: Optional[str] = None,
+        pet_id: Optional[str] = None,
+        allow_duplicates: bool = False,
+        warn_conflicts: bool = False
     ) -> Task:
         """
         Create a new task and add it to the task list
@@ -333,12 +440,37 @@ class TaskManager:
             priority: Priority level
             duration: Duration in minutes
             task_type: Type of task
+            recurrence: Recurrence pattern (None, "daily", "weekly", etc.)
+            pet_id: Optional pet ID to associate with this task
+            allow_duplicates: If False, prevents creating duplicate tasks
+            warn_conflicts: If True, prints warning messages for scheduling conflicts
 
         Returns:
             The created Task object
+
+        Raises:
+            ValueError: If duplicate task exists and allow_duplicates is False
         """
-        task = Task(task_name, description, time, priority, duration, task_type)
-        self._tasks.append(task)
+        # Check for duplicates
+        if not allow_duplicates and self.has_duplicate_task(task_name, time):
+            raise ValueError(
+                f"Task '{task_name}' at {time} already exists. "
+                "Set allow_duplicates=True to override."
+            )
+
+        task = Task(task_name, description, time, priority, duration, task_type, recurrence, pet_id)
+        self._tasks[task.get_task_id()] = task
+        self._invalidate_cache()
+
+        # Check for conflicts if requested
+        if warn_conflicts:
+            conflicts = self.check_task_conflicts(task)
+            if conflicts:
+                print(f"⚠️  WARNING: '{task_name}' at {time} has {len(conflicts)} conflict(s):")
+                for conflicting_task, reason in conflicts:
+                    print(f"   - Conflicts with '{conflicting_task.get_task_name()}' "
+                          f"at {conflicting_task.get_time()}: {reason}")
+
         return task
 
     def edit_task(self, task_id: str, **kwargs) -> Optional[Task]:
@@ -360,11 +492,12 @@ class TaskManager:
                 task.set_priority(kwargs['priority'])
             if 'duration' in kwargs:
                 task.set_duration(kwargs['duration'])
+                self._invalidate_cache()
         return task
 
     def delete_task(self, task_id: str) -> bool:
         """
-        Delete a task from the task list
+        Delete a task from the task dictionary
 
         Args:
             task_id: ID of the task to delete
@@ -372,19 +505,19 @@ class TaskManager:
         Returns:
             True if task was deleted, False if not found
         """
-        task = self.get_task_by_id(task_id)
-        if task:
-            self._tasks.remove(task)
+        if task_id in self._tasks:
+            del self._tasks[task_id]
+            self._invalidate_cache()
             return True
         return False
 
     def get_all_tasks(self) -> List[Task]:
-        """Get all tasks"""
-        return self._tasks
+        """Get all tasks as a list"""
+        return list(self._tasks.values())
 
     def get_task_by_id(self, task_id: str) -> Optional[Task]:
         """
-        Get a specific task by ID
+        Get a specific task by ID (O(1) lookup)
 
         Args:
             task_id: ID of the task to find
@@ -392,10 +525,7 @@ class TaskManager:
         Returns:
             The Task object if found, None otherwise
         """
-        for task in self._tasks:
-            if task.get_task_id() == task_id:
-                return task
-        return None
+        return self._tasks.get(task_id)
 
     def get_tasks_by_type(self, task_type: str) -> List[Task]:
         """
@@ -407,7 +537,7 @@ class TaskManager:
         Returns:
             List of tasks matching the type
         """
-        return [task for task in self._tasks if task.get_task_type() == task_type.lower()]
+        return [task for task in self._tasks.values() if task.get_task_type() == task_type.lower()]
 
     def get_tasks_by_priority(self, min_priority: int) -> List[Task]:
         """
@@ -419,28 +549,200 @@ class TaskManager:
         Returns:
             List of tasks with sufficient priority
         """
-        return [task for task in self._tasks if task.get_priority() >= min_priority]
+        return [task for task in self._tasks.values() if task.get_priority() >= min_priority]
 
-    def get_total_duration(self) -> int:
+    def get_completed_tasks(self) -> List[Task]:
         """
-        Calculate total duration of all tasks
+        Get all completed tasks
+
+        Returns:
+            List of completed tasks
+        """
+        return [task for task in self._tasks.values() if task.is_completed()]
+
+    def get_pending_tasks(self) -> List[Task]:
+        """
+        Get all pending (not completed) tasks
+
+        Returns:
+            List of pending tasks
+        """
+        return [task for task in self._tasks.values() if not task.is_completed()]
+
+    def get_recurring_tasks(self) -> List[Task]:
+        """
+        Get all recurring tasks
+
+        Returns:
+            List of recurring tasks
+        """
+        return [task for task in self._tasks.values() if task.get_recurrence() is not None]
+
+    def get_tasks_by_pet(self, pet_id: str) -> List[Task]:
+        """
+        Get all tasks associated with a specific pet
+
+        Args:
+            pet_id: The pet ID to filter by
+
+        Returns:
+            List of tasks for the specified pet
+        """
+        return [task for task in self._tasks.values() if task.get_pet_id() == pet_id]
+
+    def get_tasks_sorted_by_time(self) -> List[Task]:
+        """
+        Get all tasks sorted by scheduled time
+
+        Returns:
+            List of tasks sorted by time
+        """
+        return sorted(self._tasks.values(), key=lambda t: t.get_time_obj())
+
+    def check_task_conflicts(self, task: Task) -> List[tuple[Task, str]]:
+        """
+        Check if a task conflicts with any existing tasks (time overlap).
+        Light conflict detection - returns warnings but doesn't prevent creation.
+
+        Args:
+            task: The task to check for conflicts
+
+        Returns:
+            List of tuples (conflicting_task, reason) describing each conflict
+        """
+        conflicts = []
+        task_start = datetime.combine(datetime.today(), task.get_time_obj())
+        task_end = task_start + timedelta(minutes=task.get_duration())
+
+        for existing_task in self._tasks.values():
+            # Skip comparing task with itself
+            if existing_task.get_task_id() == task.get_task_id():
+                continue
+
+            # Calculate existing task's time range
+            existing_start = datetime.combine(datetime.today(), existing_task.get_time_obj())
+            existing_end = existing_start + timedelta(minutes=existing_task.get_duration())
+
+            # Check for time overlap
+            if not (task_end <= existing_start or existing_end <= task_start):
+                # Determine conflict type
+                same_pet = (task.get_pet_id() and existing_task.get_pet_id() and
+                           task.get_pet_id() == existing_task.get_pet_id())
+
+                if same_pet:
+                    reason = f"Same pet ({task.get_pet_id()}) has overlapping tasks"
+                else:
+                    pet1 = task.get_pet_id() or "unknown"
+                    pet2 = existing_task.get_pet_id() or "unknown"
+                    reason = f"Tasks for different pets ({pet1} and {pet2}) overlap"
+
+                conflicts.append((existing_task, reason))
+
+        return conflicts
+
+    def get_all_conflicts(self) -> List[tuple[Task, Task, str]]:
+        """
+        Find all scheduling conflicts in the entire task system.
+
+        Returns:
+            List of tuples (task1, task2, reason) for each conflict pair
+        """
+        conflicts = []
+        tasks_list = list(self._tasks.values())
+
+        for i, task1 in enumerate(tasks_list):
+            for task2 in tasks_list[i + 1:]:
+                # Calculate time ranges
+                start1 = datetime.combine(datetime.today(), task1.get_time_obj())
+                end1 = start1 + timedelta(minutes=task1.get_duration())
+
+                start2 = datetime.combine(datetime.today(), task2.get_time_obj())
+                end2 = start2 + timedelta(minutes=task2.get_duration())
+
+                # Check for overlap
+                if not (end1 <= start2 or end2 <= start1):
+                    same_pet = (task1.get_pet_id() and task2.get_pet_id() and
+                               task1.get_pet_id() == task2.get_pet_id())
+
+                    if same_pet:
+                        reason = f"⚠️  Same pet ({task1.get_pet_id()}) double-booked"
+                    else:
+                        pet1 = task1.get_pet_id() or "unknown"
+                        pet2 = task2.get_pet_id() or "unknown"
+                        reason = f"ℹ️  Owner juggling: {pet1} and {pet2} at same time"
+
+                    conflicts.append((task1, task2, reason))
+
+        return conflicts
+
+    def mark_task_completed(self, task_id: str) -> Optional[Task]:
+        """
+        Mark a task as completed. If it's a recurring task (daily/weekly),
+        automatically creates a new instance for the next occurrence.
+
+        Args:
+            task_id: ID of the task to mark as completed
+
+        Returns:
+            The newly created task if recurring, None otherwise
+        """
+        task = self.get_task_by_id(task_id)
+        if not task:
+            return None
+
+        # Mark the current task as completed
+        task.mark_completed()
+
+        # If it's a recurring task, create a new instance for next occurrence
+        if task.get_recurrence() in ["daily", "weekly"]:
+            new_task = self.create_task(
+                task_name=task.get_task_name(),
+                description=task.get_description(),
+                time=task.get_time(),
+                priority=task.get_priority(),
+                duration=task.get_duration(),
+                task_type=task.get_task_type(),
+                recurrence=task.get_recurrence(),
+                pet_id=task.get_pet_id(),
+                allow_duplicates=True  # Allow duplicate since this is a new occurrence
+            )
+            return new_task
+
+        return None
+
+    def get_total_duration(self, include_completed: bool = True) -> int:
+        """
+        Calculate total duration of all tasks (cached for performance)
+
+        Args:
+            include_completed: If True, includes completed tasks in calculation
 
         Returns:
             Total duration in minutes
         """
-        return sum(task.get_duration() for task in self._tasks)
+        # Use cache only for all tasks including completed
+        if include_completed and self._total_duration_cache is not None:
+            return self._total_duration_cache
+
+        if include_completed:
+            total = sum(task.get_duration() for task in self._tasks.values())
+            self._total_duration_cache = total
+            return total
+        else:
+            return sum(task.get_duration() for task in self._tasks.values() if not task.is_completed())
 
 
 class DailyPlanner:
     """Generates optimized daily care plans using AI"""
 
-    def __init__(self, pet: Pet, task_manager: TaskManager):
+    def __init__(self, pet: Pet, task_manager: TaskManager, buffer_minutes: int = 5):
         """
         Initialize DailyPlanner
 
         Args:
             pet: The Pet object
             task_manager: The TaskManager containing all tasks
+            buffer_minutes: Minutes of buffer time to add between consecutive tasks
         """
         self._pet = pet
         self._task_manager = task_manager
@@ -448,6 +750,8 @@ class DailyPlanner:
         self._preferences: Dict[str, Any] = {}
         self._last_plan: List[Task] = []
         self._excluded_tasks: List[Task] = []
+        self._buffer_minutes = buffer_minutes
+        self._conflicts: List[tuple[Task, Task]] = []
 
     def set_available_time(self, time: int) -> None:
         """
