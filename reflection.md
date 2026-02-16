@@ -21,7 +21,9 @@
 - If yes, describe at least one change and why you made it.
 
 ---
+At the start of implementation I wasn't too worried about implementing conflicts regarding time. I assumed that user could do tasks at the same time. However, once I was working on it I changed it otherwise so the schedule is cohesive. As a user, it would prove to be more helpful if the time for each task was designated to that particular task. So, later I added it into the code even though I refrained from including it earlier. 
 
+Also the class I stated earlier to utilize AI (Generate plan) I haven't actually implemented due to it's difficulty as of yet.
 
 ## 2. Scheduling Logic and Tradeoffs
 
@@ -36,6 +38,7 @@
 - Why is that tradeoff reasonable for this scenario?
 
 ---
+One tradeoff in my application I've noticed is the storage need
 
 ## 3. AI Collaboration
 
@@ -44,12 +47,17 @@
 - How did you use AI tools during this project (for example: design brainstorming, debugging, refactoring)?
 - What kinds of prompts or questions were most helpful?
 
+---
+I used Claude AI to help generate majority of design, and refactoring. 
+
+I tended to keep my prompts simple and direct. This way the AI would deter ranting information that isn't what was desired. Sometimes adding "DON'T INCLUDE A DEMO" helps prevent new files of a demo that wasn't asked for.
 **b. Judgment and verification**
 
 - Describe one moment where you did not accept an AI suggestion as-is.
 - How did you evaluate or verify what the AI suggested?
 
 ---
+One moment I didn't accept the AI suggestion is when the Claude AI wanted to create a complete separate file to demo a new implementation. I didn't accept this suggestion as it would over complicate my code along with the files. I had no use for a separate demo file when I have main.py and test_pawpal.py file. 
 
 ## 4. Testing and Verification
 

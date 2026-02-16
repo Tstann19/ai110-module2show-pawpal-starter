@@ -41,3 +41,16 @@ pip install -r requirements.txt
 5. Add tests to verify key behaviors.
 6. Connect your logic to the Streamlit UI in `app.py`.
 7. Refine UML so it matches what you actually built.
+
+### Smarter Scheduling
+
+My TaskManager and Application can handle: 
+
+- Time validation - No more invalid schedules
+- Daily checklists - Track what's done
+- Auto-recurring - Tasks renew automatically
+- Multi-pet support - Filter by pet
+- Fast lookups - O(1) performance
+- Conflict warnings - Avoid double-booking
+- Duplicate prevention - No accidental repeats
+- Flexible filtering - Find tasks by any criteria
