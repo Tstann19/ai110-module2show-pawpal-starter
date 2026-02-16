@@ -7,6 +7,14 @@
 - Briefly describe your initial UML design.
 - What classes did you include, and what responsibilities did you assign to each?
 
+- Add a Pet, this class should allow the user to input pet information such as name, age, and what type of animal it is like a dog, cat, bunny, fish, etc. 
+
+- Edit Tasks, this class should allow a user to change a current task or remove the task completely from the app.
+
+- Create Tasks, this class should allow the user to create tasks such as walk the dog "angie" at 5:00 pm. Tasks could be to walk, feed, give medication, grooming, playtime, etc. The user should be able to determine the time as well.
+
+- Generate Daily Plan, this class should utilize AI to generate a plan for the user to take care of their animals. 
+
 **b. Design changes**
 
 - Did your design change during implementation?
