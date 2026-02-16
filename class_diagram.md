@@ -1,7 +1,18 @@
 # PawPal+ Class Diagram
-
 ```mermaid
 classDiagram
+    class Owner {
+        -string owner_id
+        -string name
+        -string email
+        -string phone
+        -list~Pet~ _pets
+        +__init__(name, email, phone=None)
+        +add_pet(pet)
+        +get_pets()
+        +get_pet_count()
+    }
+
     class Pet {
         -string name
         -int age
@@ -10,9 +21,6 @@ classDiagram
         +get_name()
         +get_age()
         +get_animal_type()
-        +set_name(name)
-        +set_age(age)
-        +set_animal_type(animal_type)
     }
 
     class Task {
@@ -20,30 +28,36 @@ classDiagram
         -string task_name
         -string description
         -string time
+        -time time_obj
         -int priority
         -int duration
         -string task_type
-        +__init__(task_name, description, time, priority, duration, task_type)
+        -string? recurrence
+        -string? pet_id
+        -bool completed
+        -datetime? completed_time
+        +__init__(task_name, description, time, priority, duration, task_type, recurrence=None, pet_id=None)
         +get_task_id()
         +get_task_name()
-        +get_description()
         +get_time()
-        +get_priority()
-        +get_duration()
-        +get_task_type()
-        +set_time(time)
-        +set_priority(priority)
-        +set_duration(duration)
+        +get_time_obj()
+        +get_recurrence()
+        +is_completed() / get_completed_time()
+        +mark_completed()
     }
 
     class TaskManager {
-        -list~Task~ tasks
+        -Dict~string, Task~ _tasks
+        -int? _total_duration_cache
         +__init__()
-        +create_task(task_name, description, time, priority, duration, task_type)
-        +edit_task(task_id, **kwargs)
-        +delete_task(task_id)
+        +create_task(..., allow_duplicates=False, warn_conflicts=False)
+        +has_duplicate_task(task_name, time)
         +get_all_tasks()
         +get_task_by_id(task_id)
+        +get_tasks_sorted_by_time()
+        +check_task_conflicts(task)
+        +get_all_conflicts()
+        +mark_task_completed(task_id)
     }
 
     class DailyPlanner {
@@ -51,29 +65,39 @@ classDiagram
         -TaskManager task_manager
         -int available_time
         -dict preferences
+        -list~Task~ _last_plan
         +__init__(pet, task_manager)
         +set_available_time(time)
         +set_preferences(preferences)
         +generate_plan()
         +optimize_schedule()
         +explain_plan()
+        +get_plan_summary()
     }
 
-    DailyPlanner --> Pet : uses
+    class App_UI {
+        <<client>>
+        +interacts_with(TaskManager, DailyPlanner)
+    }
+
+    %% Relationships and multiplicities
+    Owner "1" o-- "*" Pet : owns
+    TaskManager "1" o-- "*" Task : manages
+    Task "0..1" -- "1" Pet : assigned_to (via pet_id)
     DailyPlanner --> TaskManager : uses
-    TaskManager --> Task : manages
+    DailyPlanner --> Pet : uses
+    App_UI ..> TaskManager : calls
+    App_UI ..> DailyPlanner : calls
+
+    %% Notes about behavior
+    note right of TaskManager
+        - _tasks: Dict[task_id, Task]
+        - create_task prevents duplicates unless allow_duplicates=True
+        - check_task_conflicts / get_all_conflicts return warnings (do not block)
+    end note
+
+    note right of Task
+        - mark_completed() sets completed and completed_time
+        - if recurrence in ["daily","weekly"], mark_task_completed() creates next occurrence
+    end note
 ```
-
-## Class Descriptions
-
-### Pet
-Stores information about the pet including name, age, and animal type (dog, cat, bunny, fish, etc.).
-
-### Task
-Represents a care task with details like name, description, scheduled time, priority, duration, and type (walk, feed, medication, grooming, playtime, etc.).
-
-### TaskManager
-Handles creating, editing, and deleting tasks. Maintains a collection of all tasks for the pet.
-
-### DailyPlanner
-Generates an optimized daily care plan using AI. Takes into account the pet information, available tasks, time constraints, and owner preferences to create a schedule.
