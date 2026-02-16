@@ -92,7 +92,7 @@ with col4:
 
 col5, col6 = st.columns(2)
 with col5:
-    task_time = st.text_input("Time", value="08:00 AM")
+    task_time = st.text_input("Time (HH:MM, 24-hour)", value="08:00")
 with col6:
     task_type = st.selectbox("Task type", ["walk", "feed", "medication", "grooming", "playtime", "training"])
 
@@ -108,24 +108,53 @@ if st.button("Add Task"):
             task_type=task_type
         )
         st.success(f"✅ Added task: {new_task.get_task_name()}")
+
+        # Check for light conflicts and present warnings
+        conflicts = st.session_state.task_manager.check_task_conflicts(new_task)
+        if conflicts:
+            msgs = []
+            for conflicting_task, reason in conflicts:
+                msgs.append(f"'{conflicting_task.get_task_name()}' at {conflicting_task.get_time()}: {reason}")
+            st.warning("⚠️ Scheduling conflict detected:\n" + "\n".join(msgs))
     except ValueError as e:
         st.error(f"Error adding task: {e}")
 
-# Display all tasks from TaskManager
-all_tasks = st.session_state.task_manager.get_all_tasks()
-if all_tasks:
-    st.write("Current tasks in TaskManager:")
+# Display all tasks from TaskManager (sorted by scheduled time)
+sorted_tasks = st.session_state.task_manager.get_tasks_sorted_by_time()
+if sorted_tasks:
+    st.markdown("### Current tasks (sorted by time)")
     task_data = [
         {
             "Task": task.get_task_name(),
             "Type": task.get_task_type(),
             "Duration (min)": task.get_duration(),
             "Priority": task.get_priority(),
-            "Time": task.get_time()
+            "Time": task.get_time(),
+            "Recurrence": task.get_recurrence() or "",
+            "Completed": "Yes" if task.is_completed() else "No"
         }
-        for task in all_tasks
+        for task in sorted_tasks
     ]
     st.table(task_data)
+
+    # Check for duplicate name+time entries
+    combo_counts = {}
+    for t in sorted_tasks:
+        key = (t.get_task_name(), t.get_time())
+        combo_counts[key] = combo_counts.get(key, 0) + 1
+
+    duplicates = [f"{name} at {time} (x{count})" for (name, time), count in combo_counts.items() if count > 1]
+    if duplicates:
+        st.warning("⚠️ Duplicate tasks detected (same name and time):")
+        for d in duplicates:
+            st.warning(f" - {d}")
+
+    # Show any overlapping scheduling conflicts across the system
+    all_conflicts = st.session_state.task_manager.get_all_conflicts()
+    if all_conflicts:
+        st.warning(f"⚠️ Found {len(all_conflicts)} scheduling conflict(s):")
+        for t1, t2, reason in all_conflicts:
+            st.warning(f" - {t1.get_task_name()} at {t1.get_time()} <> {t2.get_task_name()} at {t2.get_time()} : {reason}")
 else:
     st.info("No tasks yet. Add one above.")
 
@@ -176,15 +205,21 @@ if st.button("Generate Schedule"):
             # Display the results
             st.success(f"✅ Schedule generated! {len(plan)} tasks scheduled.")
 
-            # Show the plan
+            # Show the plan in a professional table
             if plan:
                 st.markdown("### 📅 Your Daily Schedule")
-                for i, task in enumerate(plan, 1):
-                    st.markdown(
-                        f"**{i}. {task.get_task_name()}** ({task.get_task_type()}) "
-                        f"- {task.get_duration()} min at {task.get_time()} "
-                        f"[Priority: {task.get_priority()}]"
-                    )
+                plan_table = [
+                    {
+                        "#": i + 1,
+                        "Task": task.get_task_name(),
+                        "Type": task.get_task_type(),
+                        "Duration (min)": task.get_duration(),
+                        "Priority": task.get_priority(),
+                        "Time": task.get_time()
+                    }
+                    for i, task in enumerate(plan)
+                ]
+                st.table(plan_table)
 
                 # Display plan summary using DailyPlanner.get_plan_summary()
                 summary = st.session_state.planner.get_plan_summary()
@@ -200,7 +235,7 @@ if st.button("Generate Schedule"):
                 # Show detailed explanation using DailyPlanner.explain_plan()
                 with st.expander("📝 View Detailed Explanation"):
                     explanation = st.session_state.planner.explain_plan()
-                    st.text(explanation)
+                    st.code(explanation)
 
         except ValueError as e:
             st.error(f"Error generating schedule: {e}")
